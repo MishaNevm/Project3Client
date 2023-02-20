@@ -35,7 +35,7 @@ public class RandomDTOGenerator {
         Random random = new Random();
         for (int i = 0; i < quantity; i++) {
             measurementDTOS[i] = new MeasurementDTO(random.nextFloat(-100,100)
-                    , random.nextInt(3) > 1.5,
+                    , random.nextBoolean(),
                     null);
         }
     }

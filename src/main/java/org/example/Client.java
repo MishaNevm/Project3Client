@@ -1,5 +1,6 @@
 package org.example;
 
+import com.sun.net.httpserver.Headers;
 import org.example.dto.MeasurementDTO;
 import org.example.dto.SensorDTO;
 import org.springframework.http.HttpEntity;
@@ -22,10 +23,10 @@ public class Client {
     public static void registrationSensors(RestTemplate restTemplate, SensorDTO[] sensorDTOS) {
         try {
             String url = "http://localhost:9090/sensors/registration";
-            HttpEntity<Map.Entry<String, String>> httpEntity;
+            Map<Object, Object> map;
             for (SensorDTO sensorDTO : sensorDTOS) {
-                httpEntity = new HttpEntity<>(Map.entry("name", sensorDTO.getName()));
-                System.out.println(restTemplate.postForObject(url, httpEntity, String.class));
+                map = Map.of("name", sensorDTO.getName());
+                makePostMethodToServer(restTemplate, url, map);
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -37,27 +38,27 @@ public class Client {
                                       SensorDTO[] sensorDTOS) {
         try {
             String url = "http://localhost:9090/measurements/add";
-            Map<String, Object> map;
-            HttpHeaders headers;
+            Map<Object, Object> map;
             for (int i = 0; i < measurementDTOS.length; i++) {
                 map = new HashMap<>();
-                headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
+
                 measurementDTOS[i].setSensor(sensorDTOS[i % sensorDTOS.length]);
 
                 map.put("temperature", measurementDTOS[i].getTemperature());
                 map.put("rain", measurementDTOS[i].isRain());
                 map.put("sensor", Map.of("name", measurementDTOS[i].getSensor().getName()));
 
-                HttpEntity<Object> objectHttpEntity = new HttpEntity<>(map,headers);
-
-                System.out.println(restTemplate.postForObject(url, objectHttpEntity, String.class));
+                makePostMethodToServer(restTemplate, url, map);
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
-
-
+    public static void makePostMethodToServer (RestTemplate restTemplate,String url, Map<Object, Object> mapToSend) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Object> entity = new HttpEntity<>(mapToSend, headers);
+        restTemplate.postForObject(url, entity, String.class);
+    }
 }
