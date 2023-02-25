@@ -1,5 +1,8 @@
 package org.example;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.Headers;
 import org.example.dto.MeasurementDTO;
 import org.example.dto.SensorDTO;
@@ -13,11 +16,8 @@ import java.util.Map;
 
 
 public class Client {
-    public static void main(String[] args) {
-        RestTemplate restTemplate = new RestTemplate();
-        RandomDTOGenerator randomDTOGenerator = new RandomDTOGenerator(10, 1000);
-        registrationSensors(restTemplate,randomDTOGenerator.getSensorDTOS());
-        addMeasurement(restTemplate, randomDTOGenerator.getMeasurementDTOS(), randomDTOGenerator.getSensorDTOS());
+    public static void main(String[] args) throws JsonProcessingException {
+        System.out.println(getJwtTokenFromServer(new RestTemplate()));
     }
 
     public static void registrationSensors(RestTemplate restTemplate, SensorDTO[] sensorDTOS) {
@@ -48,17 +48,37 @@ public class Client {
                 map.put("rain", measurementDTOS[i].isRain());
                 map.put("sensor", Map.of("name", measurementDTOS[i].getSensor().getName()));
 
-                makePostMethodToServer(restTemplate, url, map);
+                makePostMethodToServerWithJWT(restTemplate, url, map, getJwtTokenFromServer(restTemplate));
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public static void makePostMethodToServer (RestTemplate restTemplate,String url, Map<Object, Object> mapToSend) {
+
+    public static String getJwtTokenFromServer (RestTemplate restTemplate) throws JsonProcessingException {
+        String name = "Test1";
+        String password = "123";
+        String url = "http://localhost:9090/auth/login";
+        Map<Object, Object> mapToSend = new HashMap<>();
+        mapToSend.put("name", name);
+        mapToSend.put("password", password);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(makePostMethodToServer(restTemplate, url, mapToSend));
+        return jsonNode.get("jwt-token").asText();
+    }
+    private static String makePostMethodToServer (RestTemplate restTemplate,String url, Map<Object, Object> mapToSend) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Object> entity = new HttpEntity<>(mapToSend, headers);
-        restTemplate.postForObject(url, entity, String.class);
+        return restTemplate.postForObject(url, entity, String.class);
+    }
+    private static String makePostMethodToServerWithJWT (RestTemplate restTemplate,String url,
+                                                         Map<Object, Object> mapToSend, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Object> entity = new HttpEntity<>(mapToSend, headers);
+        return restTemplate.postForObject(url, entity, String.class);
     }
 }
